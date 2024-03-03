@@ -18,21 +18,6 @@ fn main() {
         Sigmoid,
     );
 
-    // let mut network: Network<2, 2> = Network::new(
-    //     vec![
-    //         Layer::new(
-    //             vec![vec![0.15, 0.2], vec![0.25, 0.3]],
-    //             vec![0.35, 0.35],
-    //             Sigmoid,
-    //         ),
-    //         Layer::new(
-    //             vec![vec![0.4, 0.45], vec![0.5, 0.55]],
-    //             vec![0.6, 0.6],
-    //             Sigmoid,
-    //         ),
-    //     ]
-    // );
-
     let test_cases = [
         TestCase {
             input: [0.0, 0.0],

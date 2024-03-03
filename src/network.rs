@@ -167,79 +167,79 @@ impl<const NUM_IN: usize, const NUM_OUT: usize> Network<NUM_IN, NUM_OUT> {
         intermediate_outputs
     }
 
-    pub fn backpropagate(
-        &mut self,
-        input: [f64; NUM_IN],
-        target: [f64; NUM_OUT],
-        learning_rate: f64,
-    ) -> BackpropagationPassResult {
-        let intermediate_outputs = self.forward_with_intermediate_outputs(input);
+pub fn backpropagate(
+    &mut self,
+    input: [f64; NUM_IN],
+    target: [f64; NUM_OUT],
+    learning_rate: f64,
+) -> BackpropagationPassResult {
+    let intermediate_outputs = self.forward_with_intermediate_outputs(input);
 
-        let mut layer_gradients = vec![vec![]; self.layers.len()];
-        let mut total_error = 0.0;
-        for i in 0..NUM_OUT {
-            let output = intermediate_outputs.last().unwrap()[i];
-            let error_gradient = output - target[i];
-            layer_gradients.last_mut().unwrap().push(error_gradient);
-            total_error += (-error_gradient) * (-error_gradient) / 2.0;
-        }
-
-        let mut layer_deltas = vec![];
-
-        for i in (0..self.layers.len()).rev() {
-            let layer = &self.layers[i];
-
-            let mut layer_delta = Layer::with_dimensions(
-                layer.weights.len(),
-                layer.weights[0].len(),
-                layer.activation.clone_to_box(),
-            );
-            if i > 0 {
-                layer_gradients[i - 1] = vec![0.0; layer.weights[0].len()];
-            }
-
-            for j in 0..layer.len() {
-                let output = intermediate_outputs[i + 1][j];
-                let neuron_output_gradient = layer_gradients[i][j];
-                let activation_gradient = layer.activation.derivative(output);
-                let neuron_net_input_gradient = neuron_output_gradient * activation_gradient;
-
-                let mut neuron_weights_delta = Vec::new();
-
-                for k in 0..layer.weights[j].len() {
-                    let weight_gradient = neuron_net_input_gradient * intermediate_outputs[i][k];
-                    let layer_delta = learning_rate * weight_gradient;
-                    neuron_weights_delta.push(layer_delta);
-                    if i > 0 {
-                        layer_gradients[i - 1][k] += layer.weights[j][k] * neuron_net_input_gradient;
-                    }
-                }
-
-                let bias_gradient = neuron_net_input_gradient;
-                let bias_delta = learning_rate * bias_gradient;
-                layer_delta.biases[j] = bias_delta;
-
-                layer_delta.weights[j] = neuron_weights_delta;
-            }
-            layer_deltas.push(layer_delta);
-        }
-
-        for i in 0..self.layers.len() {
-            let layer_count = self.layers.len();
-            let layer = &mut self.layers[i];
-            for j in 0..layer.len() {
-                for k in 0..layer.weights[j].len() {
-                    layer.weights[j][k] -= layer_deltas[layer_count - i - 1].weights[j][k];
-                }
-                layer.biases[j] -= layer_deltas[layer_count - i - 1].biases[j];
-            }
-        }
-
-        return BackpropagationPassResult {
-            layer_gradients,
-            total_error,
-        };
+    let mut layer_gradients = vec![vec![]; self.layers.len()];
+    let mut total_error = 0.0;
+    for i in 0..NUM_OUT {
+        let output = intermediate_outputs.last().unwrap()[i];
+        let error_gradient = output - target[i];
+        layer_gradients.last_mut().unwrap().push(error_gradient);
+        total_error += (-error_gradient) * (-error_gradient) / 2.0;
     }
+
+    let mut layer_deltas = vec![];
+
+    for i in (0..self.layers.len()).rev() {
+        let layer = &self.layers[i];
+
+        let mut layer_delta = Layer::with_dimensions(
+            layer.weights.len(),
+            layer.weights[0].len(),
+            layer.activation.clone_to_box(),
+        );
+        if i > 0 {
+            layer_gradients[i - 1] = vec![0.0; layer.weights[0].len()];
+        }
+
+        for j in 0..layer.len() {
+            let output = intermediate_outputs[i + 1][j];
+            let neuron_output_gradient = layer_gradients[i][j];
+            let activation_gradient = layer.activation.derivative(output);
+            let neuron_net_input_gradient = neuron_output_gradient * activation_gradient;
+
+            let mut neuron_weights_delta = Vec::new();
+
+            for k in 0..layer.weights[j].len() {
+                let weight_gradient = neuron_net_input_gradient * intermediate_outputs[i][k];
+                let layer_delta = learning_rate * weight_gradient;
+                neuron_weights_delta.push(layer_delta);
+                if i > 0 {
+                    layer_gradients[i - 1][k] += layer.weights[j][k] * neuron_net_input_gradient;
+                }
+            }
+
+            let bias_gradient = neuron_net_input_gradient;
+            let bias_delta = learning_rate * bias_gradient;
+            layer_delta.biases[j] = bias_delta;
+
+            layer_delta.weights[j] = neuron_weights_delta;
+        }
+        layer_deltas.push(layer_delta);
+    }
+
+    for i in 0..self.layers.len() {
+        let layer_count = self.layers.len();
+        let layer = &mut self.layers[i];
+        for j in 0..layer.len() {
+            for k in 0..layer.weights[j].len() {
+                layer.weights[j][k] -= layer_deltas[layer_count - i - 1].weights[j][k];
+            }
+            layer.biases[j] -= layer_deltas[layer_count - i - 1].biases[j];
+        }
+    }
+
+    return BackpropagationPassResult {
+        layer_gradients,
+        total_error,
+    };
+}
 
     pub fn save_to_file(&self, path: &str) -> std::io::Result<()> {
         let serialized = bincode::serialize(self).or_else(|e| {
